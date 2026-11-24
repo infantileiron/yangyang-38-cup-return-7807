@@ -9,9 +9,22 @@ from src.models.base import Base, utc_now
 
 class Observation(Base):
     __tablename__ = 'observations'
+    __table_args__ = (UniqueConstraint('week', 'version', name='uq_observation_week_version'),)
     id: Mapped[int] = mapped_column(primary_key=True)
+    week: Mapped[str] = mapped_column(String(10), index=True)
+    version: Mapped[int] = mapped_column(Integer, index=True)
     source_key: Mapped[str] = mapped_column(String(96), unique=True)
     payload: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class IngestBatch(Base):
+    __tablename__ = 'ingest_batches'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    batch_key: Mapped[str] = mapped_column(String(96), unique=True)
+    row_count: Mapped[int] = mapped_column(Integer)
+    accepted_count: Mapped[int] = mapped_column(Integer)
+    actor: Mapped[str] = mapped_column(String(60))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
@@ -24,6 +37,7 @@ class AnalysisRun(Base):
     last_observation_id: Mapped[int] = mapped_column(Integer)
     sample_size: Mapped[int] = mapped_column(Integer)
     observation_ids: Mapped[list] = mapped_column(JSON)
+    sample_versions: Mapped[dict] = mapped_column(JSON)
     status: Mapped[str] = mapped_column(String(16), default=RunStatus.QUEUED, index=True)
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)

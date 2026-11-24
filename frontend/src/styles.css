@@ -133,3 +133,9 @@ form .primary { margin-top:3px; }
   .count { min-width:0; }.table-wrap th, .table-wrap td { padding:7px 11px; }
 }
 @media (prefers-reduced-motion:reduce) { *, *::before, *::after { animation:none !important; } }
+
+/* 复盘逐周版本快照 */
+.version-chips { display:flex; flex-wrap:wrap; gap:8px; padding:14px 17px 18px; }
+.version-chip { display:inline-flex; align-items:baseline; gap:6px; border:1px solid var(--line); border-radius:999px; padding:5px 12px; background:var(--wash); font-size:13px; }
+.version-chip b { font-weight:600; }
+.version-chip i { font-style:normal; color:var(--accent); font-weight:600; }

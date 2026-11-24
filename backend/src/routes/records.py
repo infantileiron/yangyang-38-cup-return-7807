@@ -26,7 +26,10 @@ def spec():
 def index(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), user=Depends(current_user)):
     with Session() as db:
         total = db.scalar(select(func.count(Observation.id)))
-        items = db.scalars(select(Observation).order_by(Observation.id.desc()).offset(offset).limit(limit))
+        items = db.scalars(select(Observation).order_by(Observation.week.desc(),
+                                                        Observation.version.desc(),
+                                                        Observation.id.desc())
+                           .offset(offset).limit(limit))
         return {'total': total, 'offset': offset, 'items': [observation_view(item) for item in items]}
 
 
@@ -34,10 +37,14 @@ def index(offset: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=100), us
 def create(payload: dict, user=Depends(editor)):
     row = clean_observation(payload)
     with Session.begin() as db:
-        items = add_observations(db, [row], user['sub'], 'observation.created')
-        if not items:
-            raise BusinessError('相同观测已存在，请核对记录', 409)
-        return observation_view(items[0])
+        outcome = add_observations(db, [row], user['sub'], 'observation.created')
+        if outcome['rerun']:
+            existing = db.scalar(select(Observation).where(
+                Observation.week == row['week'], Observation.version == row['version']))
+            return observation_view(existing)
+        if not outcome['items']:
+            raise BusinessError('相同周与版本的观测已存在，请核对记录', 409)
+        return observation_view(outcome['items'][0])
 
 
 @router.get('/observations/template')
@@ -51,8 +58,9 @@ def template(user=Depends(current_user)):
 def import_payload(payload, actor):
     rows = parse_csv(payload)
     with Session.begin() as db:
-        items = add_observations(db, rows, actor, 'observation.imported')
-        return {'added': len(items), 'skipped': len(rows) - len(items)}
+        outcome = add_observations(db, rows, actor, 'observation.imported')
+        return {'added': outcome['added'], 'skipped': outcome['skipped'],
+                'batch_id': outcome['batch_id'], 'rerun': outcome['rerun']}
 
 
 @router.post('/observations/import')

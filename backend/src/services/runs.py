@@ -9,6 +9,7 @@ from src.domain.analysis import analyze
 from src.models.base import utc_now
 from src.models.workflow import AnalysisRun, AuditEvent, Observation, Review
 from src.services.errors import BusinessError
+from src.services.observations import latest_weekly_observations
 from src.services.validation import validated
 
 logger = logging.getLogger(__name__)
@@ -16,14 +17,19 @@ logger = logging.getLogger(__name__)
 
 def create_run(db, request, actor):
     parameters = validated(SPEC['parameters'], request.parameters, defaults=True)
-    sample_ids = list(db.scalars(select(Observation.id).order_by(Observation.id)))
-    if not sample_ids:
+    # 受理时点：每周只取已完整入库的最高来源版本，并在此刻冻结样本。
+    sample = latest_weekly_observations(db)
+    if not sample:
         raise BusinessError('请先导入观测记录')
-    item = AnalysisRun(title=request.title, owner=actor, parameters=parameters, observation_ids=sample_ids,
-                       last_observation_id=sample_ids[-1], sample_size=len(sample_ids))
+    sample_ids = [item.id for item in sample]
+    sample_versions = {item.week: item.version for item in sample}
+    item = AnalysisRun(title=request.title, owner=actor, parameters=parameters,
+                       observation_ids=sample_ids, sample_versions=sample_versions,
+                       last_observation_id=max(sample_ids), sample_size=len(sample_ids))
     db.add(item)
     db.flush()
-    db.add(AuditEvent(actor=actor, action='run.created', detail=f'分析 #{item.id}，固化 {item.sample_size} 条观测'))
+    db.add(AuditEvent(actor=actor, action='run.created',
+                      detail=f'分析 #{item.id}，固化 {item.sample_size} 个交接周的最高版本周报'))
     return item
 
 
@@ -62,8 +68,9 @@ def run_pending(db):
     if item is None:
         return False
     try:
+        # 只读取受理时冻结的观测 ID；排队期间新入库或补发的周报不换样本。
         sample = list(db.scalars(select(Observation.payload).where(Observation.id.in_(item.observation_ids))
-                                 .order_by(Observation.id)))
+                                 .order_by(Observation.week)))
         result = analyze(sample, item.parameters)
         if not {'headline', 'summary', 'metrics', 'columns', 'rows'} <= set(result):
             raise RuntimeError('invalid result schema')

@@ -14,6 +14,15 @@
       "type": "date"
     },
     {
+      "key": "version",
+      "label": "来源版本号",
+      "example": 1,
+      "type": "integer",
+      "min": 1,
+      "max": 9999,
+      "help": "服务台同一周补发退杯周报时版本号递增；晚到的旧版本不会覆盖新版本。"
+    },
+    {
       "key": "returns",
       "label": "有效退杯单数",
       "example": 84,

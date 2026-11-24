@@ -5,7 +5,8 @@ from scipy.stats import t
 
 
 COLUMNS = (
-    ("week", "生产周／估计项"), ("returns", "有效退杯"), ("actual", "周实测平均（分钟）"),
+    ("week", "生产周／估计项"), ("version", "来源版本"), ("returns", "有效退杯"),
+    ("actual", "周实测平均（分钟）"),
     ("fitted", "分段拟合（分钟）"), ("counterfactual", "延续前期趋势（分钟）"),
     ("estimate", "变化估计"), ("lower", "95% 下界"), ("upper", "95% 上界"), ("unit", "估计单位"),
 )
@@ -59,7 +60,7 @@ def analyze(rows, parameters):
     chart = []
     for index,(row,week) in enumerate(zip(ordered,weeks)):
         reference = float(weights[0]+weights[1]*week)
-        table.append(dict(week=row["week"],returns=row["returns"],actual=row["delay"],
+        table.append(dict(week=row["week"],version=row["version"],returns=row["returns"],actual=row["delay"],
                           fitted=round(float(fitted[index]),3),counterfactual=round(reference,3)))
         if week >= 0:
             chart.append((row["week"][5:],round(row["delay"]-reference,3)))
@@ -73,9 +74,15 @@ def analyze(rows, parameters):
 
 def seed():
     boundary = date(2026,9,7)
-    return [dict(week=(boundary+timedelta(weeks=index)).isoformat(),returns=64 + (index*13)%58,
+    rows = [dict(week=(boundary+timedelta(weeks=index)).isoformat(),version=1,
+                 returns=64 + (index*13)%58,
                  delay=round(12 + index*0.22 - (3.4 + index*0.38 if index >= 0 else 0) + ((index*9)%13-6)*0.075,2))
             for index in range(-12,11)]
+    # 服务台对上线当周补发的第 2 版周报：退杯用时修正，复盘应改用新版本。
+    launch = next(row for row in rows if row["week"] == boundary.isoformat())
+    rows.append(dict(week=boundary.isoformat(), version=2,
+                     returns=launch["returns"] + 4, delay=round(launch["delay"] - 0.6, 2)))
+    return rows
 
 
 def report(headline, summary, metrics, columns, rows, chart_label, chart_values, unit=""):
