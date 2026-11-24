@@ -1,0 +1,14 @@
+{
+  "slug": "yangyang-38-cup-return",
+  "title": "栅巷市集·押金票上线退杯时延复盘",
+  "direction": "中断时间序列与上线前趋势",
+  "layout": "invert",
+  "theme": "陶红收杯票窗",
+  "recipient": "栅巷市集循环杯服务台",
+  "work_modules": [
+    "等距周交接记录",
+    "上线断点与斜率",
+    "高延迟周复查"
+  ],
+  "follow_latest": false
+}

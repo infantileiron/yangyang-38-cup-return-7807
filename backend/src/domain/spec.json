@@ -1,0 +1,51 @@
+{
+  "organization": "栅巷市集循环杯服务台",
+  "tagline": "按真实上线日期校对退杯时延趋势",
+  "source": "服务台定稿的逐周平均退杯用时、有效交回数及押金票上线日期",
+  "record_name": "站点周平均退杯记录",
+  "algorithm": "分段回归与 Bartlett HAC 不确定度",
+  "formula": "生产日历周 t 距上线周计数，设计矩阵 X=[1,t,I(t≥0),tI(t≥0)]。回归系数分别描述上线前截距、前期斜率、即时变化、斜率变化。标准误以给定滞后阶数的 Bartlett 核计算 HAC，两侧置信区间用 t 分位。逐周保留只延伸上线前趋势的反事实值。",
+  "decision_prompt": "押金票计划上线当周出现差异后，平均交杯耗时是否继续改善？",
+  "fields": [
+    {
+      "key": "week",
+      "label": "周一日期",
+      "example": "2026-11-23",
+      "type": "date"
+    },
+    {
+      "key": "returns",
+      "label": "有效退杯单数",
+      "example": 84,
+      "type": "integer",
+      "min": 1,
+      "max": 100000
+    },
+    {
+      "key": "delay",
+      "label": "当周平均退杯用时（分钟）",
+      "example": 7.2,
+      "type": "number",
+      "min": 0,
+      "max": 180
+    }
+  ],
+  "parameters": [
+    {
+      "key": "start",
+      "label": "票据上线周一",
+      "type": "date",
+      "default": "2026-09-07",
+      "help": "每周一行，前后周数据必须连续。"
+    },
+    {
+      "key": "lag",
+      "label": "HAC 滞后周数",
+      "type": "integer",
+      "min": 0,
+      "max": 5,
+      "default": 2,
+      "help": "随周相关性增加而加宽适用窗口。"
+    }
+  ]
+}
